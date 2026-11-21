@@ -1,6 +1,23 @@
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ||
-  "https://financial-assistant-backend.menuvis.workers.dev";
+function getApiBaseUrl() {
+  const envUrl = import.meta.env.VITE_API_BASE_URL;
+  if (typeof window === 'undefined') return envUrl || '';
+
+  const { hostname } = window.location;
+  // If on the original domain or localhost, direct calls are allowed by backend CORS
+  if (
+    hostname === 'financial-assistant-a4x.pages.dev' ||
+    hostname === 'localhost' ||
+    hostname === '127.0.0.1'
+  ) {
+    return envUrl || 'https://financial-assistant-backend.menuvis.workers.dev';
+  }
+
+  // On new staging / preview domains (e.g. financial-assistant-frontend.pages.dev),
+  // use same-origin relative '/api' paths proxied by Cloudflare Pages Functions to eliminate CORS errors!
+  return '';
+}
+
+const API_BASE_URL = getApiBaseUrl();
 
 export class ApiError extends Error {
   constructor(message, status) {
