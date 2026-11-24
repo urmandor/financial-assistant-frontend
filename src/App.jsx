@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth, signOut } from './hooks/useAuth';
+import { useAuth, signOut, updateUser } from './hooks/useAuth';
 import { getMe } from './api/auth';
 import { AppShell } from './components/layout/AppShell';
 import { SignInPage } from './pages/SignInPage';
@@ -19,8 +19,9 @@ function AuthGate({ children }) {
     let isCancelled = false;
 
     getMe()
-      .then(() => {
+      .then((data) => {
         if (!isCancelled) {
+          if (data?.user) updateUser(data.user);
           setSessionCheck({ token, status: 'ok' });
         }
       })

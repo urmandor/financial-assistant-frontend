@@ -7,9 +7,10 @@ import {
   Database,
   ChevronRight,
   LogOut,
+  User,
 } from 'lucide-react';
 import { Link } from '../hooks/useRouter';
-import { signOut } from '../hooks/useAuth';
+import { signOut, useCurrentUser } from '../hooks/useAuth';
 
 const SETTINGS_SECTIONS = [
   {
@@ -50,8 +51,27 @@ const SETTINGS_SECTIONS = [
 ];
 
 export function SettingsPage() {
+  const user = useCurrentUser();
+
   return (
     <div className="space-y-4">
+      {user && (
+        <div className="card p-4 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="icon-chip h-10 w-10 rounded-2xl bg-primary-50 text-primary-600">
+              <User size={20} aria-hidden="true" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-ink-muted uppercase tracking-wider">Signed in as</p>
+              <p className="text-sm font-bold text-ink truncate">{user.email}</p>
+            </div>
+          </div>
+          <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 border border-emerald-200">
+            Active
+          </span>
+        </div>
+      )}
+
       <div className="card divide-y divide-line p-1">
         {SETTINGS_SECTIONS.map(({ to, title, subtitle, icon: Icon, tone }) => (
           <Link

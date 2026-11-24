@@ -1,4 +1,4 @@
-import { useSyncExternalStore, useEffect } from 'react';
+import { useSyncExternalStore } from 'react';
 import { setAuthTokenProvider } from '../api/client';
 
 const SESSION_KEY = 'fa.session';
@@ -11,7 +11,11 @@ function readStoredSession() {
     if (typeof parsed.token !== 'string' || typeof parsed.expiresAt !== 'number') {
       return null;
     }
-    return { token: parsed.token, expiresAt: parsed.expiresAt };
+    return {
+      token: parsed.token,
+      expiresAt: parsed.expiresAt,
+      user: parsed.user || null,
+    };
   } catch {
     return null;
   }
@@ -34,6 +38,7 @@ function getValidToken(session) {
 const initialStored = readStoredSession();
 let currentSessionState = {
   token: getValidToken(initialStored),
+  user: initialStored?.user || null,
   sessionExpired: initialStored !== null && getValidToken(initialStored) === null,
 };
 
@@ -57,7 +62,7 @@ export function getSessionToken() {
   return currentSessionState.token;
 }
 
-export function signIn(token, expiresAtInput) {
+export function signIn(token, expiresAtInput, user = null) {
   const parsed =
     typeof expiresAtInput === 'number'
       ? expiresAtInput
@@ -66,8 +71,18 @@ export function signIn(token, expiresAtInput) {
     ? parsed
     : Date.now() + 24 * 60 * 60 * 1000;
 
-  writeStoredSession({ token, expiresAt });
-  notifySubscribers({ token, sessionExpired: false });
+  writeStoredSession({ token, expiresAt, user });
+  notifySubscribers({ token, user, sessionExpired: false });
+}
+
+export function updateUser(userData) {
+  if (!currentSessionState.token) return;
+  const nextUser = { ...(currentSessionState.user || {}), ...userData };
+  const stored = readStoredSession();
+  if (stored) {
+    writeStoredSession({ ...stored, user: nextUser });
+  }
+  notifySubscribers({ ...currentSessionState, user: nextUser });
 }
 
 export function signOut(reason) {
@@ -75,6 +90,7 @@ export function signOut(reason) {
   if (onSignOutCallback) onSignOutCallback();
   notifySubscribers({
     token: null,
+    user: null,
     sessionExpired: reason === 'expired',
   });
 }
@@ -87,10 +103,15 @@ function subscribe(callback) {
 if (typeof window !== 'undefined') {
   window.addEventListener('storage', (e) => {
     if (e.key !== SESSION_KEY) return;
-    const token = getValidToken(readStoredSession());
+    const stored = readStoredSession();
+    const token = getValidToken(stored);
     if (token !== currentSessionState.token) {
       if (!token && onSignOutCallback) onSignOutCallback();
-      notifySubscribers({ token, sessionExpired: false });
+      notifySubscribers({
+        token,
+        user: stored?.user || null,
+        sessionExpired: false,
+      });
     }
   });
 
@@ -106,4 +127,9 @@ export function useAuth() {
     () => currentSessionState,
     () => currentSessionState
   );
+}
+
+export function useCurrentUser() {
+  const auth = useAuth();
+  return auth.user;
 }
